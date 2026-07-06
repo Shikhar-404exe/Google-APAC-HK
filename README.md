@@ -35,11 +35,6 @@
 ---
 
 <br/>
-
-https://github.com/user-attachments/assets/4e8e5d64-9a83-4567-b2a0-9c5ae07079f4
-
-<br/>
-
 ## 💫 Vision
 
 > **What if relief could fly, guided only by sound and AI?**
