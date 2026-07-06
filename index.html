@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Project Skypad – AOS Digital Twin Dashboard</title>
+  <meta name="description" content="Project Skypad Acoustic Operating System – real-time digital twin dashboard showing acoustic levitation control of utility blocks in 3D urban crisis response."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:        #040b18;
+      --panel:     rgba(4, 16, 38, 0.92);
+      --border:    rgba(0, 212, 255, 0.2);
+      --accent:    #00d4ff;
+      --accent2:   #0088cc;
+      --stable:    #00ff88;
+      --warn:      #ff9500;
+      --danger:    #ff2244;
+      --dim:       rgba(0, 212, 255, 0.08);
+      --text:      #cce8ff;
+      --text-dim:  #4a6a8a;
+      --glow:      0 0 20px rgba(0,212,255,0.25);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Rajdhani', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 20px;
+      background: rgba(2, 10, 25, 0.96);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      backdrop-filter: blur(12px);
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-icon {
+      width: 34px; height: 34px;
+      background: linear-gradient(135deg, #00d4ff 0%, #0044aa 100%);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 0 14px rgba(0,212,255,0.4);
+    }
+    .logo-text { font-size: 18px; font-weight: 700; letter-spacing: 2px; color: var(--accent); }
+    .logo-sub  { font-size: 11px; color: var(--text-dim); letter-spacing: 3px; margin-top: -2px; }
+
+    #status-bar {
+      display: flex; align-items: center; gap: 20px;
+    }
+    .status-chip {
+      display: flex; align-items: center; gap: 7px;
+      background: var(--dim);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 12px; font-weight: 600; letter-spacing: 1.5px;
+    }
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--stable);
+      box-shadow: 0 0 8px var(--stable);
+      animation: pulse-dot 1.6s ease-in-out infinite;
+    }
+    @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    .header-stat { text-align: center; }
+    .header-stat .val { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--accent); }
+    .header-stat .lbl { font-size: 10px; color: var(--text-dim); letter-spacing: 1px; }
+
+    .ws-indicator {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 11px; color: var(--text-dim);
+    }
+    .ws-dot { width: 7px; height: 7px; border-radius: 50%; background: #444; }
+    .ws-dot.live { background: var(--stable); box-shadow: 0 0 6px var(--stable); }
+
+    /* ── Main layout ─────────────────────────────────────────────────── */
+    main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      gap: 0;
+    }
+
+    /* ── Panels ───────────────────────────────────────────────────────── */
+    .panel {
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      padding: 14px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      flex-shrink: 0;
+    }
+    .panel:last-child { border-right: none; border-left: 1px solid var(--border); }
+    .left-panel  { width: 190px; }
+    .right-panel { width: 210px; }
+
+    .panel-title {
+      font-size: 10px; font-weight: 700; letter-spacing: 2.5px;
+      color: var(--text-dim); text-transform: uppercase;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ── Crisis buttons ───────────────────────────────────────────────── */
+    .crisis-btn {
+      width: 100%;
+      padding: 9px 10px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      background: rgba(0,0,0,0.3);
+      color: var(--text);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 13px; font-weight: 600;
+      letter-spacing: 0.8px;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 8px;
+      transition: all 0.2s ease;
+    }
+    .crisis-btn:hover { transform: translateX(3px); filter: brightness(1.3); }
+    .crisis-btn.active { filter: brightness(1.5); animation: btn-pulse 1s ease-in-out infinite; }
+    @keyframes btn-pulse { 0%,100%{box-shadow:0 0 0 rgba(255,255,255,0)} 50%{box-shadow:0 0 12px currentColor} }
+
+    .btn-medical       { border-color: #ff4466; color: #ff6688; }
+    .btn-heatwave      { border-color: #ff8800; color: #ffaa33; }
+    .btn-water         { border-color: #0099ff; color: #33bbff; }
+    .btn-power         { border-color: #ffcc00; color: #ffdd44; }
+    .btn-crowd         { border-color: #aa44ff; color: #cc77ff; }
+    .btn-reset         { border-color: #445566; color: #889aaa; }
+
+    /* ── Wind control ─────────────────────────────────────────────────── */
+    .wind-section { display: flex; flex-direction: column; gap: 8px; }
+    .wind-label {
+      font-size: 11px; color: var(--text-dim);
+      display: flex; justify-content: space-between;
+    }
+    .wind-label span { color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+    input[type="range"] {
+      width: 100%;
+      -webkit-appearance: none;
+      height: 4px;
+      border-radius: 2px;
+      background: linear-gradient(to right, var(--accent2) 0%, var(--accent) 100%);
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+      cursor: pointer;
+    }
+
+    /* ── Canvas section ───────────────────────────────────────────────── */
+    .canvas-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #020810;
+      position: relative;
+      overflow: hidden;
+    }
+    #skyCanvas {
+      display: block;
+      border-radius: 0;
+    }
+    .canvas-overlay-label {
+      position: absolute;
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 1.5px;
+    }
+    .overlay-top    { top: 10px;   left: 50%; transform: translateX(-50%); }
+    .overlay-bottom { bottom: 10px; left: 50%; transform: translateX(-50%); }
+
+    /* ── Telemetry panel ─────────────────────────────────────────────── */
+    .tele-group { display: flex; flex-direction: column; gap: 4px; }
+    .tele-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(0,212,255,0.06);
+    }
+    .tele-row:last-child { border-bottom: none; }
+    .tele-key  { font-size: 10px; color: var(--text-dim); letter-spacing: 1px; }
+    .tele-val  { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent); }
+
+    .power-bar-wrap {
+      height: 6px; background: rgba(0,212,255,0.1);
+      border-radius: 3px; overflow: hidden; margin-top: 4px;
+    }
+    .power-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #0088cc, #00d4ff);
+      border-radius: 3px;
+      transition: width 0.4s ease;
+      box-shadow: 0 0 8px rgba(0,212,255,0.5);
+    }
+
+    .phase-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 4px; margin-top: 4px;
+    }
+    .phase-cell {
+      background: rgba(0,212,255,0.08);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      text-align: center;
+      padding: 3px 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: var(--accent);
+    }
+
+    .crisis-badge {
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+      text-align: center;
+      background: rgba(0,212,255,0.1);
+      border: 1px solid var(--border);
+      color: var(--accent);
+    }
+    .crisis-badge.MEDICAL       { background:rgba(255,68,102,.12); border-color:#ff4466; color:#ff6688; }
+    .crisis-badge.HEATWAVE      { background:rgba(255,136,0,.12);  border-color:#ff8800; color:#ffaa33; }
+    .crisis-badge.WATER_SHORTAGE{ background:rgba(0,153,255,.12);  border-color:#0099ff; color:#33bbff; }
+    .crisis-badge.POWER_OUTAGE  { background:rgba(255,204,0,.12);  border-color:#ffcc00; color:#ffdd44; }
+    .crisis-badge.CROWD_CRUSH   { background:rgba(170,68,255,.12); border-color:#aa44ff; color:#cc77ff; }
+    .crisis-badge.IDLE          { background:rgba(0,212,255,.06);  border-color:var(--border); color:var(--text-dim); }
+
+    /* ── Coord display ────────────────────────────────────────────────── */
+    .xyz-display {
+      display: flex; gap: 6px;
+    }
+    .xyz-item {
+      flex: 1; text-align: center;
+      background: var(--dim);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 4px 2px;
+    }
+    .xyz-item .axis { font-size: 9px; color: var(--text-dim); }
+    .xyz-item .num  { font-family:'JetBrains Mono',monospace; font-size: 11px; color: var(--accent); }
+
+    /* ── Reason box ───────────────────────────────────────────────────── */
+    .reason-box {
+      background: var(--dim);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 6px 8px;
+      font-size: 10px;
+      color: var(--text-dim);
+      line-height: 1.5;
+      min-height: 36px;
+    }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════ HEADER ═══════════════════ -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">🛸</div>
+    <div>
+      <div class="logo-text">SKYPAD</div>
+      <div class="logo-sub">ACOUSTIC OPERATING SYSTEM</div>
+    </div>
+  </div>
+
+  <div id="status-bar">
+    <div class="status-chip">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">STABLE</span>
+    </div>
+    <div class="header-stat">
+      <div class="val" id="hPower">33.3%</div>
+      <div class="lbl">FIELD PWR</div>
+    </div>
+    <div class="header-stat">
+      <div class="val" id="hError">0.00m</div>
+      <div class="lbl">POS ERROR</div>
+    </div>
+    <div class="header-stat">
+      <div class="val" id="hWind">0.0 m/s</div>
+      <div class="lbl">WIND SPD</div>
+    </div>
+    <div class="ws-indicator">
+      <div class="ws-dot" id="wsDot"></div>
+      <span id="wsLabel">OFFLINE</span>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════════════════ MAIN ═══════════════════ -->
+<main>
+
+  <!-- LEFT PANEL: Crisis triggers + Wind -->
+  <aside class="panel left-panel">
+    <div class="panel-title">Crisis Dispatch</div>
+
+    <button class="crisis-btn btn-medical"  onclick="triggerCrisis('MEDICAL')">
+      🏥 Medical Emergency
+    </button>
+    <button class="crisis-btn btn-heatwave" onclick="triggerCrisis('HEATWAVE')">
+      🌡️ Heatwave Alert
+    </button>
+    <button class="crisis-btn btn-water"    onclick="triggerCrisis('WATER_SHORTAGE')">
+      💧 Water Shortage
+    </button>
+    <button class="crisis-btn btn-power"    onclick="triggerCrisis('POWER_OUTAGE')">
+      ⚡ Power Outage
+    </button>
+    <button class="crisis-btn btn-crowd"    onclick="triggerCrisis('CROWD_CRUSH')">
+      👥 Crowd Crush
+    </button>
+    <button class="crisis-btn btn-reset"    onclick="resetSystem()">
+      ↺ Return to Base
+    </button>
+
+    <div class="panel-title" style="margin-top:8px">Wind Simulation</div>
+    <div class="wind-section">
+      <div class="wind-label">East Wind X <span id="windXval">0.0</span> m/s</div>
+      <input type="range" min="-20" max="20" value="0" step="0.5" id="windX"
+             oninput="updateWind()"/>
+      <div class="wind-label">North Wind Y <span id="windYval">0.0</span> m/s</div>
+      <input type="range" min="-20" max="20" value="0" step="0.5" id="windY"
+             oninput="updateWind()"/>
+      <div class="wind-label" style="margin-top:6px; font-size:10px; color:#334466">
+        ⚠ &gt;15 m/s triggers EMERGENCY_DOCK
+      </div>
+    </div>
+  </aside>
+
+  <!-- CENTER: Canvas visualization -->
+  <section class="canvas-section">
+    <div class="canvas-overlay-label overlay-top">AOS OPERATIONAL CORRIDOR — 3.5m to 12.0m AGL</div>
+    <canvas id="skyCanvas"></canvas>
+    <div class="canvas-overlay-label overlay-bottom">STREET LEVEL — CITY CROSS-SECTION  |  X: 0–100m</div>
+  </section>
+
+  <!-- RIGHT PANEL: Telemetry -->
+  <aside class="panel right-panel">
+    <div class="panel-title">Active Mission</div>
+    <div class="crisis-badge IDLE" id="crisisBadge">IDLE</div>
+
+    <div class="panel-title">Block Position</div>
+    <div class="tele-group">
+      <div class="tele-row"><span class="tele-key">CURRENT</span></div>
+      <div class="xyz-display" id="currXYZ">
+        <div class="xyz-item"><div class="axis">X</div><div class="num" id="cx">5.0</div></div>
+        <div class="xyz-item"><div class="axis">Y</div><div class="num" id="cy">50.0</div></div>
+        <div class="xyz-item"><div class="axis">Z</div><div class="num" id="cz">3.5</div></div>
+      </div>
+      <div class="tele-row" style="margin-top:4px"><span class="tele-key">TARGET</span></div>
+      <div class="xyz-display">
+        <div class="xyz-item"><div class="axis">X</div><div class="num" id="tx">5.0</div></div>
+        <div class="xyz-item"><div class="axis">Y</div><div class="num" id="ty">50.0</div></div>
+        <div class="xyz-item"><div class="axis">Z</div><div class="num" id="tz">3.5</div></div>
+      </div>
+    </div>
+
+    <div class="panel-title">Acoustic Field</div>
+    <div class="tele-group">
+      <div class="tele-row">
+        <span class="tele-key">POWER</span>
+        <span class="tele-val" id="rPower">33.3%</span>
+      </div>
+      <div class="power-bar-wrap"><div class="power-bar" id="powerBar" style="width:33%"></div></div>
+      <div class="tele-row">
+        <span class="tele-key">GRAVITY COMP</span>
+        <span class="tele-val" id="rGrav">4.905 N</span>
+      </div>
+      <div class="tele-row">
+        <span class="tele-key">WIND DRAG</span>
+        <span class="tele-val" id="rDrag">0.000 N</span>
+      </div>
+    </div>
+
+    <div class="panel-title">Phase Matrix (8 nodes)</div>
+    <div class="phase-grid" id="phaseGrid">
+      <div class="phase-cell">0.000</div>
+      <div class="phase-cell">0.000</div>
+      <div class="phase-cell">0.000</div>
+      <div class="phase-cell">0.000</div>
+      <div class="phase-cell">0.000</div>
+      <div class="phase-cell">0.000</div>
+      <div class="phase-cell">0.000</div>
+      <div class="phase-cell">0.000</div>
+    </div>
+
+    <div class="panel-title">Correction Vector</div>
+    <div class="tele-group" id="corrGroup">
+      <div class="tele-row"><span class="tele-key">Ax</span><span class="tele-val" id="rAx">0.0000</span></div>
+      <div class="tele-row"><span class="tele-key">Ay</span><span class="tele-val" id="rAy">0.0000</span></div>
+      <div class="tele-row"><span class="tele-key">Az</span><span class="tele-val" id="rAz">0.0000</span></div>
+    </div>
+
+    <div class="panel-title">AI Routing</div>
+    <div class="reason-box" id="reasonBox">Awaiting mission…</div>
+    <div class="tele-row">
+      <span class="tele-key">ASSET</span>
+      <span class="tele-val" id="rAsset">—</span>
+    </div>
+    <div class="tele-row">
+      <span class="tele-key">PRIORITY</span>
+      <span class="tele-val" id="rPriority">#—</span>
+    </div>
+  </aside>
+
+</main>
+
+<script>
+// ════════════════════════════════════════════════════════════════════════════
+//  PROJECT SKYPAD — STAGE 4: DIGITAL TWIN FRONTEND
+//  Canvas-based real-time acoustic levitation visualiser
+// ════════════════════════════════════════════════════════════════════════════
+
+// ── Canvas setup ─────────────────────────────────────────────────────────
+const canvas = document.getElementById('skyCanvas');
+const ctx    = canvas.getContext('2d');
+
+function resizeCanvas() {
+  const section = canvas.parentElement;
+  canvas.width  = section.clientWidth;
+  canvas.height = section.clientHeight;
+  initBuildings();
+}
+window.addEventListener('resize', resizeCanvas);
+
+// ── Grid / World constants ────────────────────────────────────────────────
+const SIM_X_RANGE = 100;   // metres
+const SIM_Z_MIN   = 3.5;
+const SIM_Z_MAX   = 12.0;
+const SIM_Z_RANGE = SIM_Z_MAX - SIM_Z_MIN;   // 8.5m
+
+// Padding from canvas edges
+const PAD_LEFT  = 0;
+const PAD_RIGHT = 0;
+
+// ── Coordinate mapping ────────────────────────────────────────────────────
+function canvasY_fromGround(frac) {
+  // frac 0 = AOS_BOTTOM (Z=3.5m), frac 1 = AOS_TOP (Z=12m)
+  const c = canvas.height;
+  const groundY  = c * 0.82;
+  const aosFloor = c * 0.72;
+  const aosCeil  = c * 0.08;
+  return aosFloor - frac * (aosFloor - aosCeil);
+}
+function toCanvas(simX, simZ) {
+  const c = canvas;
+  const usableW = c.width - PAD_LEFT - PAD_RIGHT;
+  const cx = PAD_LEFT + (simX / SIM_X_RANGE) * usableW;
+  const frac = (simZ - SIM_Z_MIN) / SIM_Z_RANGE;
+  const cy = canvasY_fromGround(frac);
+  return { x: cx, y: cy };
+}
+function groundY()  { return canvas.height * 0.82; }
+function aosFloorY(){ return canvas.height * 0.72; }
+function aosCeilY() { return canvas.height * 0.08; }
+
+// ── Simulation state (live from WebSocket) ────────────────────────────────
+const STATE = {
+  current:     [5, 50, 3.5],
+  target:      [5, 50, 3.5],
+  wind:        [0, 0, 0],
+  status:      'STABLE',
+  power:       33.3,
+  error_m:     0,
+  correction:  [0,0,0],
+  phase_shifts: new Array(8).fill(0),
+  drag_N:      0,
+  gravity_N:   4.905,
+  crisis:      'IDLE',
+  asset:       'none',
+  priority:    10,
+  reasoning:   '',
+  // Visual interpolation (client-side smooth lerp)
+  dispX: 5,
+  dispZ: 3.5,
+};
+
+const CRISIS_COLORS = {
+  MEDICAL:        '#ff4466',
+  HEATWAVE:       '#ff8800',
+  WATER_SHORTAGE: '#0099ff',
+  POWER_OUTAGE:   '#ffcc00',
+  CROWD_CRUSH:    '#aa44ff',
+  IDLE:           '#00d4ff',
+};
+
+const ASSET_ICONS = {
+  medical_kit:     '🏥',
+  shade_sail:      '☂',
+  water_unit:      '💧',
+  power_cell:      '⚡',
+  air_filter_unit: '🌬',
+  emergency_beacon:'📡',
+  none:            '📦',
+};
+
+function statusColor() {
+  if (STATE.status === 'EMERGENCY_DOCK') return '#ff2244';
+  if (STATE.status === 'COMPENSATION')   return '#ff9500';
+  return '#00ff88';
+}
+function crisisColor() { return CRISIS_COLORS[STATE.crisis] || '#00d4ff'; }
+
+// ── Pre-built city buildings ──────────────────────────────────────────────
+let BUILDINGS = [];
+function initBuildings() {
+  const defs = [
+    { rx: 0.00, rw: 0.09, rh: 0.38 },
+    { rx: 0.10, rw: 0.06, rh: 0.55 },
+    { rx: 0.17, rw: 0.10, rh: 0.30 },
+    { rx: 0.28, rw: 0.07, rh: 0.48 },
+    { rx: 0.36, rw: 0.11, rh: 0.62 },
+    { rx: 0.48, rw: 0.08, rh: 0.35 },
+    { rx: 0.57, rw: 0.10, rh: 0.52 },
+    { rx: 0.68, rw: 0.07, rh: 0.42 },
+    { rx: 0.76, rw: 0.12, rh: 0.68 },
+    { rx: 0.89, rw: 0.11, rh: 0.44 },
+  ];
+  const gY = groundY();
+  const zoneH = gY - aosFloorY();
+
+  BUILDINGS = defs.map(d => {
+    const bh = d.rh * zoneH * 0.9;
+    const bx = d.rx * canvas.width;
+    const bw = d.rw * canvas.width;
+    // Pre-compute windows
+    const windows = [];
+    for (let wy = 6; wy < bh - 6; wy += 16) {
+      for (let wx = 4; wx < bw - 4; wx += 10) {
+        windows.push({ wx, wy, lit: Math.random() > 0.45 });
+      }
+    }
+    return { bx, bw, bh, windows };
+  });
+}
+
+// ── Stars (pre-computed) ──────────────────────────────────────────────────
+let STARS = [];
+function initStars() {
+  STARS = Array.from({ length: 120 }, () => ({
+    x: Math.random(),  // fraction of canvas width
+    y: Math.random() * 0.68,  // in sky portion
+    s: Math.random() * 1.5 + 0.3,
+    a: Math.random() * 0.7 + 0.2,
+    twinkle: Math.random() * Math.PI * 2,
+  }));
+}
+initStars();
+
+// ── Acoustic waves ────────────────────────────────────────────────────────
+const waves = [];
+let lastWaveT = 0;
+
+function spawnWaves(bx, by) {
+  const now = performance.now();
+  if (now - lastWaveT < 380) return;
+  lastWaveT = now;
+  const offsets = [
+    [-1,-1],[+1,-1],[-1,+1],[+1,+1],
+    [-1,-1],[+1,-1],[-1,+1],[+1,+1],
+  ];
+  const R = 36;
+  offsets.forEach((o, i) => {
+    const depth = i < 4 ? 0 : 4;
+    waves.push({
+      x: bx + o[0] * R + depth,
+      y: by + o[1] * R * 0.55 + depth,
+      r: 0, maxR: 55, alpha: 0.7,
+    });
+  });
+}
+
+// ── Wind particles ────────────────────────────────────────────────────────
+const PARTICLE_COUNT = 90;
+let particles = [];
+function initParticles() {
+  particles = Array.from({ length: PARTICLE_COUNT }, () => ({
+    x: Math.random(),  // fraction
+    y: aosFloorY() + Math.random() * (aosFloorY() - aosCeilY()),  // invalid on init
+    speed: Math.random() * 0.5 + 0.2,
+    size:  Math.random() * 2 + 0.3,
+    alpha: Math.random() * 0.25 + 0.05,
+  }));
+}
+
+// ── Draw functions ────────────────────────────────────────────────────────
+
+function drawSky() {
+  const h = canvas.height, w = canvas.width;
+  const grad = ctx.createLinearGradient(0, 0, 0, h * 0.82);
+  grad.addColorStop(0,    '#010812');
+  grad.addColorStop(0.5,  '#040c20');
+  grad.addColorStop(1.0,  '#08142e');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, w, h);
+}
+
+function drawStars(t) {
+  STARS.forEach(s => {
+    const flicker = 0.6 + 0.4 * Math.sin(s.twinkle + t * 0.001);
+    ctx.beginPath();
+    ctx.arc(s.x * canvas.width, s.y * canvas.height, s.s, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(200,230,255,${s.a * flicker})`;
+    ctx.fill();
+  });
+}
+
+function drawGround() {
+  const gY = groundY(), w = canvas.width, h = canvas.height;
+
+  // Street gradient (below ground)
+  const streetGrad = ctx.createLinearGradient(0, gY, 0, h);
+  streetGrad.addColorStop(0, '#0a141e');
+  streetGrad.addColorStop(1, '#050c14');
+  ctx.fillStyle = streetGrad;
+  ctx.fillRect(0, gY, w, h - gY);
+
+  // Street line
+  ctx.strokeStyle = '#1a2a3a';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, gY); ctx.lineTo(w, gY); ctx.stroke();
+
+  // Road markings
+  ctx.strokeStyle = 'rgba(50,80,100,0.4)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([30, 20]);
+  ctx.beginPath();
+  ctx.moveTo(0, gY + (h - gY) * 0.5);
+  ctx.lineTo(w, gY + (h - gY) * 0.5);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawBuildings() {
+  const gY = groundY();
+  BUILDINGS.forEach(b => {
+    const top = gY - b.bh;
+
+    // Building body gradient
+    const grad = ctx.createLinearGradient(b.bx, top, b.bx + b.bw, top);
+    grad.addColorStop(0, '#0a1630');
+    grad.addColorStop(1, '#071228');
+    ctx.fillStyle = grad;
+    ctx.fillRect(b.bx, top, b.bw, b.bh);
+
+    // Building edge glow
+    ctx.strokeStyle = 'rgba(0, 80, 160, 0.35)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(b.bx, top, b.bw, b.bh);
+
+    // Windows
+    b.windows.forEach(win => {
+      if (!win.lit) return;
+      ctx.fillStyle = 'rgba(255, 240, 120, 0.28)';
+      ctx.fillRect(b.bx + win.wx, top + win.wy, 5, 7);
+    });
+  });
+}
+
+function drawAOSZone() {
+  const floorY = aosFloorY(), ceilY = aosCeilY(), w = canvas.width;
+  const pct = STATE.power / 100;
+
+  // Faint AOS zone overlay
+  const zoneGrad = ctx.createLinearGradient(0, ceilY, 0, floorY);
+  zoneGrad.addColorStop(0, `rgba(0,100,200,${0.02 + pct * 0.04})`);
+  zoneGrad.addColorStop(1, `rgba(0,150,255,${0.01 + pct * 0.02})`);
+  ctx.fillStyle = zoneGrad;
+  ctx.fillRect(0, ceilY, w, floorY - ceilY);
+
+  // Acoustic grid
+  const gridAlpha = 0.04 + pct * 0.10;
+  ctx.strokeStyle = `rgba(0,212,255,${gridAlpha})`;
+  ctx.lineWidth = 0.5;
+  const step = 45;
+  for (let y = ceilY; y <= floorY; y += step) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+  }
+  for (let x = 0; x <= w; x += step) {
+    ctx.beginPath(); ctx.moveTo(x, ceilY); ctx.lineTo(x, floorY); ctx.stroke();
+  }
+
+  // AOS floor line
+  ctx.strokeStyle = 'rgba(0,212,255,0.3)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([8, 6]);
+  ctx.beginPath(); ctx.moveTo(0, floorY); ctx.lineTo(w, floorY); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(0,212,255,0.5)';
+  ctx.font = '10px Rajdhani';
+  ctx.fillText('Z=3.5m  AOS FLOOR', 6, floorY - 4);
+
+  // AOS ceiling line
+  ctx.strokeStyle = 'rgba(0,212,255,0.2)';
+  ctx.setLineDash([8, 6]);
+  ctx.beginPath(); ctx.moveTo(0, ceilY); ctx.lineTo(w, ceilY); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(0,212,255,0.35)';
+  ctx.fillText('Z=12.0m  AOS CEILING', 6, ceilY + 13);
+}
+
+function drawGridGlow(bx, by) {
+  // Brighten the grid near the active block
+  const step = 45;
+  const radius = 110;
+  const pct = STATE.power / 100;
+  const floorY = aosFloorY(), ceilY = aosCeilY(), w = canvas.width;
+
+  for (let y = ceilY; y <= floorY; y += step) {
+    for (let x = 0; x <= w; x += step) {
+      const dist = Math.sqrt((x - bx) ** 2 + (y - by) ** 2);
+      if (dist < radius) {
+        const g = (1 - dist / radius) * pct;
+        ctx.beginPath();
+        ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(0,212,255,${g * 0.75})`;
+        ctx.fill();
+      }
+    }
+  }
+}
+
+function drawWaves(bx, by) {
+  spawnWaves(bx, by);
+
+  for (let i = waves.length - 1; i >= 0; i--) {
+    const w = waves[i];
+    w.r += 1.5;
+    w.alpha *= 0.965;
+    if (w.r >= w.maxR || w.alpha < 0.01) { waves.splice(i, 1); continue; }
+
+    const cc = crisisColor();
+    ctx.beginPath();
+    ctx.arc(w.x, w.y, w.r, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(0,212,255,${w.alpha * 0.8})`;
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    // Outer colored ring for active crisis
+    if (STATE.crisis !== 'IDLE') {
+      ctx.beginPath();
+      ctx.arc(w.x, w.y, w.r * 0.6, 0, Math.PI * 2);
+      const hex = cc.replace('#','');
+      const r = parseInt(hex.substr(0,2),16);
+      const g = parseInt(hex.substr(2,2),16);
+      const b = parseInt(hex.substr(4,2),16);
+      ctx.strokeStyle = `rgba(${r},${g},${b},${w.alpha * 0.5})`;
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+    }
+  }
+}
+
+function drawNodes(bx, by) {
+  const offsets = [
+    [-1,-1],[+1,-1],[-1,+1],[+1,+1],
+    [-1,-1],[+1,-1],[-1,+1],[+1,+1],
+  ];
+  const R = 36;
+  offsets.forEach((o, i) => {
+    const depth = i < 4 ? 0 : 5;
+    const nx = bx + o[0] * R + depth;
+    const ny = by + o[1] * R * 0.55 + depth;
+
+    // Line from node to block
+    ctx.beginPath(); ctx.moveTo(nx, ny); ctx.lineTo(bx, by);
+    ctx.strokeStyle = `rgba(0,212,255,0.12)`;
+    ctx.lineWidth = 0.7;
+    ctx.stroke();
+
+    // Node circle with phase-shift glow
+    const phase = STATE.phase_shifts[i] || 0;
+    const phaseGlow = Math.abs(Math.sin(phase)) * 0.6 + 0.2;
+    ctx.shadowColor  = '#00d4ff';
+    ctx.shadowBlur   = 10 * phaseGlow;
+    ctx.beginPath();
+    ctx.arc(nx, ny, 4, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(0,212,255,${0.5 + phaseGlow * 0.5})`;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  });
+}
+
+function drawBlock(bx, by) {
+  const W = 38, H = 24;
+  const color = statusColor();
+  const cc    = crisisColor();
+
+  // Outer glow
+  ctx.shadowColor = color;
+  ctx.shadowBlur  = 22;
+
+  // Block body
+  ctx.beginPath();
+  ctx.roundRect(bx - W/2, by - H/2, W, H, 5);
+  ctx.fillStyle = 'rgba(0, 20, 48, 0.92)';
+  ctx.fill();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.8;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Corner accent marks
+  const cLen = 6;
+  ctx.strokeStyle = cc;
+  ctx.lineWidth = 1.5;
+  [[bx-W/2, by-H/2], [bx+W/2, by-H/2], [bx-W/2, by+H/2], [bx+W/2, by+H/2]].forEach(([cx,cy], qi) => {
+    const sx = qi % 2 === 0 ? 1 : -1;
+    const sy = qi < 2 ? 1 : -1;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + sx*cLen, cy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, cy + sy*cLen); ctx.stroke();
+  });
+
+  // Asset icon
+  const icon = ASSET_ICONS[STATE.asset] || '📦';
+  ctx.font = '13px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(icon, bx, by);
+
+  // Floating altitude label
+  ctx.font = '9px JetBrains Mono, monospace';
+  ctx.fillStyle = color;
+  ctx.textAlign = 'center';
+  ctx.fillText(`Z=${STATE.dispZ.toFixed(1)}m`, bx, by - H/2 - 8);
+}
+
+function drawWindParticles() {
+  const wx = STATE.wind[0];
+  const speed = Math.abs(wx);
+  if (speed < 0.2) return;
+
+  const dir = wx > 0 ? 1 : -1;
+  const floorY_ = aosFloorY(), ceilY_ = aosCeilY();
+  const zoneH = floorY_ - ceilY_;
+
+  particles.forEach(p => {
+    // Reinit y each frame from zone (particles may have old y from resize)
+    if (p.resetY) { p.y = ceilY_ + Math.random() * zoneH; p.resetY = false; }
+    const px = p.x * canvas.width;
+    const py = p.y;
+    if (py < ceilY_ || py > floorY_) return;
+
+    const newX = px + dir * p.speed * speed * 0.6;
+    p.x = ((newX + canvas.width) % canvas.width) / canvas.width;
+
+    ctx.beginPath();
+    ctx.arc(px, py, p.size, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(160,220,255,${p.alpha * Math.min(1, speed / 5)})`;
+    ctx.fill();
+
+    // Streak in wind direction
+    if (speed > 4) {
+      const streakLen = dir * speed * 2;
+      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + streakLen, py);
+      ctx.strokeStyle = `rgba(120,200,255,${p.alpha * 0.4})`;
+      ctx.lineWidth = p.size * 0.5;
+      ctx.stroke();
+    }
+  });
+}
+
+function drawWindArrow() {
+  const wx = STATE.wind[0];
+  if (Math.abs(wx) < 0.5) return;
+  const w = canvas.width, bw = 120;
+  const ax = wx > 0 ? w * 0.12 : w * 0.88;
+  const ay = aosFloorY() - 20;
+  const dir = wx > 0 ? 1 : -1;
+  const speed = Math.abs(wx);
+  const alpha = Math.min(0.8, speed / 15);
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = '#88bbff';
+  ctx.fillStyle   = '#88bbff';
+  ctx.lineWidth = 2;
+  // Arrow shaft
+  ctx.beginPath(); ctx.moveTo(ax - dir*20, ay); ctx.lineTo(ax + dir*20, ay); ctx.stroke();
+  // Arrowhead
+  ctx.beginPath();
+  ctx.moveTo(ax + dir*20, ay);
+  ctx.lineTo(ax + dir*10, ay - 6);
+  ctx.lineTo(ax + dir*10, ay + 6);
+  ctx.closePath(); ctx.fill();
+  // Label
+  ctx.font = '10px Rajdhani';
+  ctx.textAlign = 'center';
+  ctx.fillText(`${speed.toFixed(1)} m/s`, ax, ay - 11);
+  ctx.restore();
+}
+
+function drawHUD(bx, by) {
+  // Target cross-hair
+  const tc = toCanvas(STATE.target[0], STATE.target[2]);
+  const cc = crisisColor();
+  if (STATE.crisis !== 'IDLE') {
+    ctx.strokeStyle = cc;
+    ctx.globalAlpha = 0.5;
+    ctx.lineWidth   = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(tc.x - 12, tc.y); ctx.lineTo(tc.x + 12, tc.y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(tc.x, tc.y - 12); ctx.lineTo(tc.x, tc.y + 12); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1.0;
+
+    // Dashed line from block to target
+    ctx.strokeStyle = `${cc}44`;
+    ctx.lineWidth   = 1;
+    ctx.setLineDash([5, 8]);
+    ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(tc.x, tc.y); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // X-axis ruler at AOS floor
+  const flY = aosFloorY();
+  ctx.fillStyle = 'rgba(0,180,220,0.25)';
+  ctx.font = '9px JetBrains Mono, monospace';
+  ctx.textAlign = 'center';
+  [0,10,20,30,40,50,60,70,80,90,100].forEach(m => {
+    const rx = (m / 100) * canvas.width;
+    ctx.fillText(m, rx, flY + 10);
+  });
+}
+
+// ── Main render loop ──────────────────────────────────────────────────────
+let lastTime = 0;
+function render(t) {
+  if (!canvas.width) { requestAnimationFrame(render); return; }
+
+  // Smooth lerp toward server position
+  const LERP = 0.07;
+  STATE.dispX += (STATE.current[0] - STATE.dispX) * LERP;
+  STATE.dispZ += (STATE.current[2] - STATE.dispZ) * LERP;
+
+  const pos = toCanvas(STATE.dispX, STATE.dispZ);
+  const bx = pos.x, by = pos.y;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  drawSky();
+  drawStars(t);
+  drawGround();
+  drawBuildings();
+  drawAOSZone();
+  drawGridGlow(bx, by);
+  drawWindParticles();
+  drawWaves(bx, by);
+  drawNodes(bx, by);
+  drawBlock(bx, by);
+  drawWindArrow();
+  drawHUD(bx, by);
+
+  requestAnimationFrame(render);
+}
+
+// ── WebSocket client ──────────────────────────────────────────────────────
+let ws;
+function connectWS() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}/ws`);
+  ws.onopen = () => {
+    document.getElementById('wsDot').classList.add('live');
+    document.getElementById('wsLabel').textContent = 'LIVE';
+  };
+  ws.onmessage = (e) => {
+    const d = JSON.parse(e.data);
+    STATE.current     = d.current     || STATE.current;
+    STATE.target      = d.target      || STATE.target;
+    STATE.wind        = d.wind        || STATE.wind;
+    STATE.status      = d.status      || STATE.status;
+    STATE.power       = d.power       != null ? d.power : STATE.power;
+    STATE.error_m     = d.error_m     != null ? d.error_m : STATE.error_m;
+    STATE.correction  = d.correction  || STATE.correction;
+    STATE.phase_shifts= d.phase_shifts|| STATE.phase_shifts;
+    STATE.drag_N      = d.drag_N      != null ? d.drag_N : STATE.drag_N;
+    STATE.gravity_N   = d.gravity_N   != null ? d.gravity_N : STATE.gravity_N;
+    STATE.crisis      = d.crisis      || 'IDLE';
+    STATE.asset       = d.asset       || 'none';
+    STATE.priority    = d.priority    != null ? d.priority : 10;
+    STATE.reasoning   = d.reasoning   || '';
+    updateTelemetry();
+  };
+  ws.onclose = () => {
+    document.getElementById('wsDot').classList.remove('live');
+    document.getElementById('wsLabel').textContent = 'RECONNECT…';
+    setTimeout(connectWS, 2500);
+  };
+  ws.onerror = () => ws.close();
+}
+
+// ── Telemetry panel update ────────────────────────────────────────────────
+function updateTelemetry() {
+  // Header
+  const col = STATE.status === 'EMERGENCY_DOCK' ? '#ff2244'
+            : STATE.status === 'COMPENSATION'   ? '#ff9500' : '#00ff88';
+  const dot = document.getElementById('statusDot');
+  const txt = document.getElementById('statusText');
+  dot.style.background = col;
+  dot.style.boxShadow  = `0 0 8px ${col}`;
+  txt.textContent = STATE.status.replace('_', ' ');
+
+  document.getElementById('hPower').textContent = STATE.power.toFixed(1) + '%';
+  document.getElementById('hError').textContent = STATE.error_m.toFixed(2) + 'm';
+  const ws2 = Math.sqrt(STATE.wind[0]**2 + STATE.wind[1]**2 + STATE.wind[2]**2);
+  document.getElementById('hWind').textContent  = ws2.toFixed(1) + ' m/s';
+
+  // Crisis badge
+  const badge = document.getElementById('crisisBadge');
+  badge.textContent = STATE.crisis;
+  badge.className   = `crisis-badge ${STATE.crisis}`;
+
+  // Position
+  ['cx','cy','cz'].forEach((id,i) => {
+    document.getElementById(id).textContent = STATE.current[i].toFixed(1);
+  });
+  ['tx','ty','tz'].forEach((id,i) => {
+    document.getElementById(id).textContent = STATE.target[i].toFixed(1);
+  });
+
+  // Power bar
+  document.getElementById('rPower').textContent = STATE.power.toFixed(1) + '%';
+  document.getElementById('powerBar').style.width = Math.min(100, STATE.power) + '%';
+  document.getElementById('rGrav').textContent   = STATE.gravity_N.toFixed(3) + ' N';
+  document.getElementById('rDrag').textContent   = STATE.drag_N.toFixed(4) + ' N';
+
+  // Phase grid
+  const grid = document.getElementById('phaseGrid');
+  grid.querySelectorAll('.phase-cell').forEach((cell, i) => {
+    const p = STATE.phase_shifts[i] || 0;
+    cell.textContent = p.toFixed(3);
+    const intensity = Math.abs(Math.sin(p));
+    cell.style.color = `hsl(${190 + intensity * 40}, 100%, ${50 + intensity * 30}%)`;
+    cell.style.background = `rgba(0,212,255,${0.04 + intensity * 0.12})`;
+  });
+
+  // Correction vector
+  ['rAx','rAy','rAz'].forEach((id, i) => {
+    const v = STATE.correction[i] || 0;
+    const el = document.getElementById(id);
+    el.textContent = v.toFixed(4);
+    el.style.color = v > 0 ? '#00ff88' : v < 0 ? '#ff4466' : '#00d4ff';
+  });
+
+  // Routing info
+  document.getElementById('reasonBox').textContent =
+    STATE.reasoning || 'Awaiting mission…';
+  const icon = ASSET_ICONS[STATE.asset] || '—';
+  document.getElementById('rAsset').textContent   = icon + ' ' + (STATE.asset || '—').replace('_',' ');
+  document.getElementById('rPriority').textContent= STATE.priority <= 1 ? '#1 ⚡' : `#${STATE.priority}`;
+
+  // Active crisis button highlight
+  document.querySelectorAll('.crisis-btn').forEach(b => b.classList.remove('active'));
+  const key = STATE.crisis.toLowerCase().replace('_','-');
+  const activeBtn = document.querySelector(`.btn-${key}`);
+  if (activeBtn) activeBtn.classList.add('active');
+}
+
+// ── API helpers ───────────────────────────────────────────────────────────
+async function triggerCrisis(type) {
+  try {
+    const r = await fetch(`/api/trigger/${type}`, { method: 'POST' });
+    const d = await r.json();
+    console.log('Crisis triggered:', d);
+  } catch (e) { console.error('Trigger failed:', e); }
+}
+
+async function resetSystem() {
+  try {
+    await fetch('/api/reset');
+    document.querySelectorAll('.crisis-btn').forEach(b => b.classList.remove('active'));
+  } catch (e) { console.error('Reset failed:', e); }
+}
+
+function updateWind() {
+  const wx = parseFloat(document.getElementById('windX').value);
+  const wy = parseFloat(document.getElementById('windY').value);
+  document.getElementById('windXval').textContent = wx.toFixed(1);
+  document.getElementById('windYval').textContent = wy.toFixed(1);
+
+  // Throttle POST
+  clearTimeout(updateWind._t);
+  updateWind._t = setTimeout(async () => {
+    try {
+      await fetch('/api/wind', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ x: wx, y: wy, z: 0 }),
+      });
+    } catch (e) {}
+  }, 150);
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  resizeCanvas();
+  initParticles();
+  // Spread particles across AOS zone after canvas sized
+  particles.forEach(p => {
+    p.y = aosCeilY() + Math.random() * (aosFloorY() - aosCeilY());
+  });
+  connectWS();
+  requestAnimationFrame(render);
+});
+</script>
+</body>
+</html>
